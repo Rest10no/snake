@@ -99,7 +99,7 @@
         <div class="high-score">High Score: <span id="highScoreValue">0</span></div>
         <div class="level">Level: <span id="levelValue">1</span></div>
         <button class="audio-button" id="audioToggle">🔊</button>
-        <div class="swipe-hint">Swipe on snake to change direction</div>
+        <div class="swipe-hint">Press and drag to control Steve</div>
         <audio id="bgMusic" loop>
             <source src="bgm.MP3" type="audio/mp3">
         </audio>
@@ -470,7 +470,7 @@
             // Instructions
             ctx.font = '18px Arial';
             ctx.fillStyle = '#fff';
-            ctx.fillText('Swipe on snake to change direction', canvas.width / 2, canvas.height / 2);
+            ctx.fillText('Press and drag to control Steve', canvas.width / 2, canvas.height / 2);
             ctx.fillText('Collect lava chickens to grow', canvas.width / 2, canvas.height / 2 + 30);
             
             // Start prompt
@@ -549,10 +549,12 @@
             }
         });
         
-        // Touch variables for swipe detection
+        // Touch variables for continuous control
         let touchStartX = 0;
         let touchStartY = 0;
-        let lastTouchTime = 0;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+        let isTouching = false;
         
         // Event listener for touch start
         canvas.addEventListener('touchstart', (e) => {
@@ -568,50 +570,59 @@
                 return;
             }
             
-            // Store touch start position for swipe detection
+            // Store touch position
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
-            lastTouchTime = Date.now();
+            lastTouchX = touchStartX;
+            lastTouchY = touchStartY;
+            isTouching = true;
         });
         
-        // Event listener for touch end to detect swipes
-        canvas.addEventListener('touchend', (e) => {
+        // Event listener for touch move to continuously control direction
+        canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
             
-            // Only process if game is active
-            if (!gameStarted || gameOver) return;
+            // Only process if game is active and touching
+            if (!gameStarted || gameOver || !isTouching) return;
             
-            // Ignore if touch was too long ago (not a swipe)
-            if (Date.now() - lastTouchTime > 500) return;
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
             
-            // Calculate touch distance
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-            const diffX = touchEndX - touchStartX;
-            const diffY = touchEndY - touchStartY;
+            // Calculate movement from last position
+            const diffX = currentX - lastTouchX;
+            const diffY = currentY - lastTouchY;
             
-            // Determine swipe direction (if swipe was significant enough)
-            const minSwipeDistance = 30;
+            // Only change direction if movement is significant
+            const minMoveDistance = 20;
             
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                // Horizontal swipe
-                if (Math.abs(diffX) > minSwipeDistance) {
+            if (Math.abs(diffX) > minMoveDistance || Math.abs(diffY) > minMoveDistance) {
+                // Determine primary direction of movement
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    // Horizontal movement
                     if (diffX > 0 && direction !== 'left') {
                         nextDirection = 'right';
                     } else if (diffX < 0 && direction !== 'right') {
                         nextDirection = 'left';
                     }
-                }
-            } else {
-                // Vertical swipe
-                if (Math.abs(diffY) > minSwipeDistance) {
+                } else {
+                    // Vertical movement
                     if (diffY > 0 && direction !== 'up') {
                         nextDirection = 'down';
                     } else if (diffY < 0 && direction !== 'down') {
                         nextDirection = 'up';
                     }
                 }
+                
+                // Update last touch position
+                lastTouchX = currentX;
+                lastTouchY = currentY;
             }
+        });
+        
+        // Event listener for touch end
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isTouching = false;
         });
         
         // Mouse click for desktop
